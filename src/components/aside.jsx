@@ -10,7 +10,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const menus = [
   { name: "Dashboard", icon: <Home size={20} />, path: "/dashboard" },
@@ -23,6 +23,8 @@ const menus = [
 
 const Sidebar = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
   const [isMobile, setIsMobile] = useState(false);
   const [expanded, setExpanded] = useState(false);
 
@@ -34,6 +36,15 @@ const Sidebar = () => {
   }, []);
 
   const isActive = (path) => location.pathname === path;
+
+  const handleLogout = () => {
+    // Clear tokens
+    localStorage.removeItem("authToken");
+    sessionStorage.removeItem("authToken");
+
+    // Redirect to login
+    navigate("/");
+  };
 
   return (
     <>
@@ -76,21 +87,44 @@ const Sidebar = () => {
 
         {/* Menu */}
         <nav className="flex-1 flex flex-col mt-4 gap-2 overflow-y-auto px-2">
-          {menus.map((menu) => (
-            <a
-              key={menu.name}
-              href={menu.path}
-              className={`
-                flex items-center gap-4 p-3 rounded-xl transition-all
-                ${isActive(menu.path) ? "bg-blue-100 text-blue-600 font-semibold" : "hover:bg-gray-100"}
-                ${!isMobile || expanded ? "justify-start" : "justify-center"}
-              `}
-              title={menu.name}
-            >
-              {menu.icon}
-              {(!isMobile || expanded) && <span className="text-lg">{menu.name}</span>}
-            </a>
-          ))}
+          {menus.map((menu) => {
+            if (menu.name === "Logout") {
+              return (
+                <button
+                  key={menu.name}
+                  onClick={handleLogout}
+                  className={`
+                    flex items-center gap-4 p-3 rounded-xl transition-all text-left
+                    hover:bg-red-100 text-red-600 font-semibold
+                    ${!isMobile || expanded ? "justify-start" : "justify-center"}
+                  `}
+                >
+                  {menu.icon}
+                  {(!isMobile || expanded) && (
+                    <span className="text-lg">{menu.name}</span>
+                  )}
+                </button>
+              );
+            }
+
+            return (
+              <a
+                key={menu.name}
+                href={menu.path}
+                className={`
+                  flex items-center gap-4 p-3 rounded-xl transition-all
+                  ${isActive(menu.path) ? "bg-blue-100 text-blue-600 font-semibold" : "hover:bg-gray-100"}
+                  ${!isMobile || expanded ? "justify-start" : "justify-center"}
+                `}
+                title={menu.name}
+              >
+                {menu.icon}
+                {(!isMobile || expanded) && (
+                  <span className="text-lg">{menu.name}</span>
+                )}
+              </a>
+            );
+          })}
         </nav>
 
         {/* Footer */}

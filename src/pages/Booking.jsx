@@ -1,22 +1,38 @@
 // src/pages/BookingsPage.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Eye, Trash, X } from "lucide-react";
 import DashboardWrapper from "../components/dashboardlayout";
 import { motion, AnimatePresence } from "framer-motion";
+import axios from "axios";
 
-const dummyBookings = [
-  { id: 1, name: "John Doe", email: "john@example.com", service: "Web Design", date: "2025-09-30", time: "10:00 AM", message: "Need urgent website redesign" },
-  { id: 2, name: "Jane Smith", email: "jane@example.com", service: "Photography", date: "2025-10-05", time: "2:30 PM", message: "Photoshoot for event" },
-  { id: 3, name: "Bob Johnson", email: "bob@example.com", service: "Branding", date: "2025-10-10", time: "1:00 PM", message: "Logo design needed" },
-];
+const API_BASE = "https://okellobackend-production.up.railway.app/booking";
 
 const BookingsPage = () => {
-  const [bookings, setBookings] = useState(dummyBookings);
+  const [bookings, setBookings] = useState([]);
   const [selectedIds, setSelectedIds] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [loading, setLoading] = useState(false);
+
+  // Fetch bookings from backend
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get(API_BASE);
+      setBookings(res.data.data.map(b => ({ ...b, id: b._id })));
+    } catch (err) {
+      console.error("Failed to fetch bookings:", err);
+      alert("Failed to fetch bookings.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
 
   const filteredBookings = useMemo(() => {
     return bookings
@@ -37,18 +53,29 @@ const BookingsPage = () => {
     );
   };
 
-  const handleDeleteBooking = (id) => {
-    if (window.confirm("Are you sure you want to delete this booking?")) {
+  const handleDeleteBooking = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this booking?")) return;
+    try {
+      await axios.delete(`${API_BASE}/${id}`);
       setBookings(bookings.filter((b) => b.id !== id));
       setSelectedIds(prev => prev.filter(i => i !== id));
+    } catch (err) {
+      console.error("Failed to delete booking:", err);
+      alert("Failed to delete booking.");
     }
   };
 
-  const handleDeleteSelected = () => {
+  const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return alert("No bookings selected!");
-    if (window.confirm("Are you sure you want to delete selected bookings?")) {
-      setBookings(bookings.filter((b) => !selectedIds.includes(b.id)));
+    if (!window.confirm("Are you sure you want to delete selected bookings?")) return;
+
+    try {
+      await Promise.all(selectedIds.map(id => axios.delete(`${API_BASE}/${id}`)));
+      setBookings(bookings.filter(b => !selectedIds.includes(b.id)));
       setSelectedIds([]);
+    } catch (err) {
+      console.error("Failed to delete selected bookings:", err);
+      alert("Failed to delete selected bookings.");
     }
   };
 
@@ -93,52 +120,57 @@ const BookingsPage = () => {
           </div>
         </div>
 
-        {/* Booking Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {filteredBookings.map((booking) => (
-            <motion.div
-              key={booking.id}
-              className={`relative bg-white shadow-lg rounded-2xl p-5 overflow-hidden border border-gray-100 hover:shadow-2xl transition-transform transform hover:scale-105`}
-              whileHover={{ scale: 1.05 }}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center">
-                  <h2 className="font-semibold text-lg line-clamp-1">{booking.name}</h2>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(booking.id)}
-                    onChange={() => toggleSelect(booking.id)}
-                  />
-                </div>
-                <p className="text-gray-500 text-sm">{booking.email}</p>
-                <p className="text-gray-500 text-sm font-medium">{booking.service}</p>
+        {loading ? (
+          <p>Loading bookings...</p>
+        ) : filteredBookings.length === 0 ? (
+          <p>No bookings found.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredBookings.map((booking) => (
+              <motion.div
+                key={booking.id}
+                className="relative bg-white shadow-lg rounded-2xl p-5 overflow-hidden border border-gray-100 hover:shadow-2xl transition-transform transform hover:scale-105"
+                whileHover={{ scale: 1.05 }}
+              >
+                <div className="flex flex-col gap-2">
+                  <div className="flex justify-between items-center">
+                    <h2 className="font-semibold text-lg line-clamp-1">{booking.name}</h2>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(booking.id)}
+                      onChange={() => toggleSelect(booking.id)}
+                    />
+                  </div>
+                  <p className="text-gray-500 text-sm">{booking.email}</p>
+                  <p className="text-gray-500 text-sm font-medium">{booking.service}</p>
 
-                <div className="flex justify-start items-center gap-2 mt-1">
-                  <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{booking.date}</span>
-                  <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">{booking.time}</span>
-                </div>
+                  <div className="flex justify-start items-center gap-2 mt-1">
+                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{booking.date}</span>
+                    <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">{booking.time}</span>
+                  </div>
 
-                <p className="text-gray-600 text-sm mt-2 line-clamp-3">{booking.message}</p>
+                  <p className="text-gray-600 text-sm mt-2 line-clamp-3">{booking.message}</p>
 
-                {/* Hover Actions */}
-                <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-40 flex justify-center items-center gap-4 opacity-0 hover:opacity-100 transition-opacity rounded-2xl">
-                  <button
-                    onClick={() => handleOpenModal(booking)}
-                    className="text-white bg-blue-500 p-2 rounded-full hover:bg-blue-600 transition"
-                  >
-                    <Eye size={20} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteBooking(booking.id)}
-                    className="text-white bg-red-500 p-2 rounded-full hover:bg-red-600 transition"
-                  >
-                    <Trash size={20} />
-                  </button>
+                  {/* Hover Actions */}
+                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-40 flex justify-center items-center gap-4 opacity-0 hover:opacity-100 transition-opacity rounded-2xl">
+                    <button
+                      onClick={() => handleOpenModal(booking)}
+                      className="text-white bg-blue-500 p-2 rounded-full hover:bg-blue-600 transition"
+                    >
+                      <Eye size={20} />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteBooking(booking.id)}
+                      className="text-white bg-red-500 p-2 rounded-full hover:bg-red-600 transition"
+                    >
+                      <Trash size={20} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        )}
 
         {/* Modal */}
         <AnimatePresence>

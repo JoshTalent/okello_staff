@@ -1,19 +1,30 @@
 // src/Login.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Eye, EyeOff, Mail } from "lucide-react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState("");
   const [strength, setStrength] = useState(0);
   const [remember, setRemember] = useState(false);
+
   const canvasRef = useRef(null);
   const particles = useRef([]);
 
-  // Particle logic with mouse interaction
+  // ✅ Auto redirect if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken");
+    if (token) navigate("/dashboard");
+  }, [navigate]);
+
+  // Particle background
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -40,7 +51,6 @@ const Login = () => {
         p.x += p.dx;
         p.y += p.dy;
 
-        // Mouse attraction
         if (mouse.x && mouse.y) {
           const distX = mouse.x - p.x;
           const distY = mouse.y - p.y;
@@ -82,20 +92,37 @@ const Login = () => {
     };
   }, []);
 
-  const handleLogin = (e) => {
+  // ✅ Handle login
+  const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError(false);
+    setError("");
 
-    setTimeout(() => {
-      if (email === "user@example.com" && password === "password123") {
-        alert(`Logged in as ${email}`);
-        setLoading(false);
+    try {
+      const res = await axios.post(
+        "https://okellobackend-production.up.railway.app/admin/login",
+        { email, password }
+      );
+
+      const { token, message } = res.data;
+
+      if (remember) {
+        localStorage.setItem("authToken", token);
       } else {
-        setLoading(false);
-        setError(true);
+        sessionStorage.setItem("authToken", token);
       }
-    }, 1500);
+
+      alert(message || "Login successful!");
+      setLoading(false);
+      navigate("/dashboard"); // ✅ Redirect
+    } catch (err) {
+      setLoading(false);
+      if (err.response && err.response.data) {
+        setError(err.response.data.message || "Invalid email or password");
+      } else {
+        setError("Network error. Please try again.");
+      }
+    }
   };
 
   const checkStrength = (pwd) => {
@@ -109,10 +136,8 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-gray-50 via-gray-100 to-gray-50 relative overflow-hidden">
-      {/* Particle canvas */}
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-0"></canvas>
 
-      {/* Floating shapes */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="w-72 h-72 bg-blue-500 rounded-full opacity-20 blur-3xl absolute -top-16 -left-16 animate-spin-slow"></div>
         <div className="w-96 h-96 bg-purple-500 rounded-full opacity-15 blur-3xl absolute -bottom-20 -right-20 animate-spin-slow"></div>
@@ -120,7 +145,6 @@ const Login = () => {
       </div>
 
       <div className="relative w-full max-w-md z-10">
-        {/* Card Glow */}
         <div className="absolute -inset-1 bg-gradient-to-r from-blue-500 to-purple-500 rounded-3xl blur-xl opacity-20"></div>
 
         <div
@@ -180,9 +204,9 @@ const Login = () => {
               </button>
             </div>
 
-            {/* Password strength */}
+            {/* Strength */}
             {password && (
-              <div className="flex flex-col gap-1 relative group">
+              <div className="flex flex-col gap-1">
                 <div className="h-2 w-full rounded-xl bg-gray-200">
                   <div
                     className={`h-2 rounded-xl transition-all ${
@@ -192,7 +216,9 @@ const Login = () => {
                         ? "w-1/2 bg-yellow-400"
                         : strength === 3
                         ? "w-3/4 bg-blue-400"
-                        : "w-full bg-green-500"
+                        : strength === 4
+                        ? "w-full bg-green-500"
+                        : ""
                     }`}
                   ></div>
                 </div>
@@ -205,14 +231,14 @@ const Login = () => {
               </div>
             )}
 
-            {/* Error message */}
+            {/* Error */}
             {error && (
               <p className="text-red-500 text-sm text-center animate-pulse">
-                Invalid email or password
+                {error}
               </p>
             )}
 
-            {/* Remember me + support */}
+            {/* Remember + Help */}
             <div className="flex items-center justify-between text-sm text-gray-500">
               <label className="flex items-center gap-2">
                 <input
@@ -228,7 +254,7 @@ const Login = () => {
               </a>
             </div>
 
-            {/* Login Button */}
+            {/* Button */}
             <button
               type="submit"
               className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl flex justify-center items-center gap-3 transition-all shadow-lg hover:shadow-xl active:scale-95"
