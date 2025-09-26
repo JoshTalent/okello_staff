@@ -1,4 +1,3 @@
-// src/pages/BookingsPage.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Eye, Trash, X } from "lucide-react";
 import DashboardWrapper from "../components/dashboardlayout";
@@ -39,7 +38,8 @@ const BookingsPage = () => {
       .filter(b =>
         b.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.service.toLowerCase().includes(searchQuery.toLowerCase())
+        b.service.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        b.phone.includes(searchQuery)
       )
       .sort((a, b) => {
         if (sortOrder === "asc") return new Date(a.date) - new Date(b.date);
@@ -142,6 +142,7 @@ const BookingsPage = () => {
                     />
                   </div>
                   <p className="text-gray-500 text-sm">{booking.email}</p>
+                  <p className="text-gray-500 text-sm">{booking.phone}</p>
                   <p className="text-gray-500 text-sm font-medium">{booking.service}</p>
 
                   <div className="flex justify-start items-center gap-2 mt-1">
@@ -198,6 +199,7 @@ const BookingsPage = () => {
                 <div className="flex flex-col gap-2">
                   <p><strong>Name:</strong> {selectedBooking.name}</p>
                   <p><strong>Email:</strong> {selectedBooking.email}</p>
+                  <p><strong>Phone:</strong> {selectedBooking.phone}</p>
                   <p><strong>Service:</strong> {selectedBooking.service}</p>
                   <p><strong>Date:</strong> {selectedBooking.date}</p>
                   <p><strong>Time:</strong> {selectedBooking.time}</p>
