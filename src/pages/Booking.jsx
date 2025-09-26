@@ -1,3 +1,4 @@
+// src/pages/BookingsPage.jsx
 import React, { useState, useEffect, useMemo } from "react";
 import { Eye, Trash, X } from "lucide-react";
 import DashboardWrapper from "../components/dashboardlayout";
@@ -15,7 +16,6 @@ const BookingsPage = () => {
   const [sortOrder, setSortOrder] = useState("asc");
   const [loading, setLoading] = useState(false);
 
-  // Fetch bookings from backend
   const fetchBookings = async () => {
     setLoading(true);
     try {
@@ -68,7 +68,6 @@ const BookingsPage = () => {
   const handleDeleteSelected = async () => {
     if (selectedIds.length === 0) return alert("No bookings selected!");
     if (!window.confirm("Are you sure you want to delete selected bookings?")) return;
-
     try {
       await Promise.all(selectedIds.map(id => axios.delete(`${API_BASE}/${id}`)));
       setBookings(bookings.filter(b => !selectedIds.includes(b.id)));
@@ -89,10 +88,32 @@ const BookingsPage = () => {
     setModalOpen(false);
   };
 
+  const getBookingStyle = (date) => {
+    const today = new Date();
+    const bookingDate = new Date(date);
+    const isToday =
+      bookingDate.getDate() === today.getDate() &&
+      bookingDate.getMonth() === today.getMonth() &&
+      bookingDate.getFullYear() === today.getFullYear();
+
+    if (isToday) return "bg-yellow-50 border-yellow-400";
+    if (bookingDate > today) return "bg-green-50 border-green-400";
+    return "bg-white border-gray-100";
+  };
+
+  const isToday = (date) => {
+    const today = new Date();
+    const bookingDate = new Date(date);
+    return (
+      bookingDate.getDate() === today.getDate() &&
+      bookingDate.getMonth() === today.getMonth() &&
+      bookingDate.getFullYear() === today.getFullYear()
+    );
+  };
+
   return (
     <DashboardWrapper>
       <div className="p-6 flex flex-col gap-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <h1 className="text-3xl font-bold text-gray-800">Bookings</h1>
           <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center w-full sm:w-auto">
@@ -129,9 +150,14 @@ const BookingsPage = () => {
             {filteredBookings.map((booking) => (
               <motion.div
                 key={booking.id}
-                className="relative bg-white shadow-lg rounded-2xl p-5 overflow-hidden border border-gray-100 hover:shadow-2xl transition-transform transform hover:scale-105"
+                className={`relative shadow-lg rounded-2xl p-5 overflow-hidden border transition-transform transform hover:scale-105 ${getBookingStyle(booking.date)}`}
                 whileHover={{ scale: 1.05 }}
               >
+                {isToday(booking.date) && (
+                  <span className="absolute top-3 right-3 bg-yellow-400 text-white px-2 py-1 rounded-full text-xs font-bold">
+                    TODAY
+                  </span>
+                )}
                 <div className="flex flex-col gap-2">
                   <div className="flex justify-between items-center">
                     <h2 className="font-semibold text-lg line-clamp-1">{booking.name}</h2>
@@ -146,13 +172,14 @@ const BookingsPage = () => {
                   <p className="text-gray-500 text-sm font-medium">{booking.service}</p>
 
                   <div className="flex justify-start items-center gap-2 mt-1">
-                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">{booking.date}</span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${isToday(booking.date) ? "bg-yellow-200 text-yellow-800" : "bg-blue-100 text-blue-700"}`}>
+                      {booking.date}
+                    </span>
                     <span className="bg-green-100 text-green-700 text-xs px-2 py-1 rounded-full">{booking.time}</span>
                   </div>
 
                   <p className="text-gray-600 text-sm mt-2 line-clamp-3">{booking.message}</p>
 
-                  {/* Hover Actions */}
                   <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-40 flex justify-center items-center gap-4 opacity-0 hover:opacity-100 transition-opacity rounded-2xl">
                     <button
                       onClick={() => handleOpenModal(booking)}
@@ -173,7 +200,6 @@ const BookingsPage = () => {
           </div>
         )}
 
-        {/* Modal */}
         <AnimatePresence>
           {modalOpen && selectedBooking && (
             <motion.div
